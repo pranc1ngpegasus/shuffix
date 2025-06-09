@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby-version: ['3.0', '3.1', '3.2', '3.3']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby-version }}
+        bundler-cache: true
+
+    - name: Run RSpec tests
+      run: bundle exec rspec
+
+    - name: Run Minitest tests
+      run: bundle exec rake test
+
+    - name: Run RSpec tests with Shuffix disabled
+      run: bundle exec rspec
+      env:
+        DISABLE_SHUFFIX: true
+
+    - name: Run Minitest tests with Shuffix disabled
+      run: bundle exec rake test
+      env:
+        DISABLE_SHUFFIX: true
+
+    - name: Run tests with fixed seed
+      run: |
+        bundle exec rspec
+        bundle exec rake test
+      env:
+        SHUFFIX_SEED: 12345
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+        bundler-cache: true
+
+    - name: Install Rubocop
+      run: gem install rubocop
+
+    - name: Run Rubocop
+      run: rubocop
+      continue-on-error: true
+
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+        bundler-cache: true
+
+    - name: Build gem
+      run: bundle exec rake build
+
+    - name: Upload gem artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: shuffix-gem
+        path: pkg/*.gem
+        retention-days: 7
